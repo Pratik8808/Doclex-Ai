@@ -10,11 +10,13 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
+  password  String
   role      Role     @default(USER)
   createdAt DateTime @default(now())
 
   documents Document[]
 }
+
 
 model Document {
   id        String   @id @default(uuid())
