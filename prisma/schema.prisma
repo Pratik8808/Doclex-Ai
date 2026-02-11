@@ -11,22 +11,27 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String
-  role      Role     @default(USER)
+  role      Role
   createdAt DateTime @default(now())
 
   documents Document[]
+  reviews   Document[] @relation("LawyerReview")
 }
 
 
 model Document {
   id        String   @id @default(uuid())
   title     String
+  content   String?
   source    DocumentSource
   status    DocumentStatus @default(PENDING)
   createdAt DateTime @default(now())
 
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+
+  lawyerId  String?
+  lawyer    User?    @relation("LawyerReview", fields: [lawyerId], references: [id])
 
   aiResult  AIResult?
 }
@@ -43,9 +48,9 @@ model AIResult {
 
 enum Role {
   USER
-  ADMIN
-  EXPERT
+  LAWYER
 }
+
 
 enum DocumentSource {
   EDITOR
