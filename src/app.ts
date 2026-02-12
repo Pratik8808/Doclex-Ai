@@ -3,6 +3,7 @@ import cors from "cors";
 import authRoutes from "./routes/auth.routes";
 import documentRoutes from "./routes/ document.routes";
 import path from "path";
+import { authenticate } from "./middleware/ auth.middleware";
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(express.json());
 
 app.use(
   "/uploads",
+  authenticate,
   express.static(path.join(__dirname, "../uploads"))
 );
 

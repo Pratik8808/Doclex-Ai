@@ -1,16 +1,17 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../prisma";
+import { Role } from "@prisma/client";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
-export const registerUser = async (email: string, password: string) => {
+export const registerUser = async (email: string, password: string,role:string) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   return prisma.user.create({
     data: {
       email,
-      role: "USER",
+      role: role,
       password: hashedPassword,
     },
   });
