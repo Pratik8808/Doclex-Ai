@@ -14,9 +14,13 @@ model User {
   role      Role
   createdAt DateTime @default(now())
 
-  documents Document[]
-  reviews   Document[] @relation("LawyerReview")
+  // Documents created by this user
+  documents Document[] @relation("OwnerDocuments")
+
+  // Documents this lawyer reviews
+  reviews   Document[] @relation("LawyerDocuments")
 }
+
 
 
 model Document {
@@ -24,22 +28,27 @@ model Document {
   title     String
   content   String?
   source    DocumentSource
-  status    DocumentStatus @default(PENDING)
+  status    DocumentStatus @default(DRAFT)
   createdAt DateTime @default(now())
+  filePath  String? 
 
+  // Creator (USER or LAWYER)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation("OwnerDocuments", fields: [userId], references: [id])
 
+  // Assigned lawyer (optional)
   lawyerId  String?
-  lawyer    User?    @relation("LawyerReview", fields: [lawyerId], references: [id])
+  lawyer    User?    @relation("LawyerDocuments", fields: [lawyerId], references: [id])
 
   aiResult  AIResult?
 }
+
 
 model AIResult {
   id         String   @id @default(uuid())
   decision   String
   score      Int?
+  feedback   String?
   createdAt  DateTime @default(now())
 
   documentId String   @unique
@@ -59,8 +68,10 @@ enum DocumentSource {
 }
 
 enum DocumentStatus {
-  PENDING
+  DRAFT
+  AI_REVIEWED
+  REVIEW_REQUESTED
   APPROVED
   REJECTED
-  REVIEW
 }
+
