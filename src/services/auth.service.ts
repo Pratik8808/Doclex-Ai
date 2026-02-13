@@ -7,11 +7,14 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
 export const registerUser = async (email: string, password: string,role:string) => {
   const hashedPassword = await bcrypt.hash(password, 10);
+    if (role !== Role.USER && role !== Role.LAWYER) {
+    throw new Error("Invalid role selected");
+  }
 
   return prisma.user.create({
     data: {
       email,
-      role: role,
+      role: role as Role,
       password: hashedPassword,
     },
   });
