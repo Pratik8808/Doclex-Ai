@@ -8,50 +8,41 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role
-  createdAt DateTime @default(now())
+  id           String     @id @default(uuid())
+  email        String     @unique
+  password     String
+  firstName    String
+  lastName     String
+  role         Role
+  refreshToken String?
+  createdAt    DateTime   @default(now())
 
-  // Documents created by this user
   documents Document[] @relation("OwnerDocuments")
-
-  // Documents this lawyer reviews
   reviews   Document[] @relation("LawyerDocuments")
 }
 
-
-
 model Document {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
   title     String
-  content   String?
   source    DocumentSource
   status    DocumentStatus @default(DRAFT)
-  createdAt DateTime @default(now())
-  filePath  String? 
-
-  // Creator (USER or LAWYER)
+  createdAt DateTime       @default(now())
   userId    String
-  user      User     @relation("OwnerDocuments", fields: [userId], references: [id])
-
-  // Assigned lawyer (optional)
+  content   String?
   lawyerId  String?
-  lawyer    User?    @relation("LawyerDocuments", fields: [lawyerId], references: [id])
-
+  filePath  String?
   aiResult  AIResult?
+  lawyer    User?          @relation("LawyerDocuments", fields: [lawyerId], references: [id])
+  user      User           @relation("OwnerDocuments", fields: [userId], references: [id])
 }
-
 
 model AIResult {
   id         String   @id @default(uuid())
   decision   String
   score      Int?
-  feedback   String?
   createdAt  DateTime @default(now())
-
   documentId String   @unique
+  feedback   String?
   document   Document @relation(fields: [documentId], references: [id])
 }
 
@@ -59,7 +50,6 @@ enum Role {
   USER
   LAWYER
 }
-
 
 enum DocumentSource {
   EDITOR
@@ -74,4 +64,3 @@ enum DocumentStatus {
   APPROVED
   REJECTED
 }
-
