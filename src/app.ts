@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
 import documentRoutes from "./routes/ document.routes";
+import aiRoutes from "./routes/ai.routes"
 import path from "path";
 import { authenticate } from "./middleware/ auth.middleware";
 
@@ -18,6 +19,7 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/documents", documentRoutes);
+app.use('/api/documents',aiRoutes)
 
 
 app.get('/', (req, res) => {

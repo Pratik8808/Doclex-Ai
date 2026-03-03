@@ -1,7 +1,24 @@
 import { Request, Response } from "express";
 import { PrismaClient, DocumentSource } from "@prisma/client";
 
+import { getReviewQueue } from "../services/document.service";
+
 const prisma = new PrismaClient();
+
+
+export const reviewQueue = async (req: Request, res: Response) => {
+  try {
+    const documents = await getReviewQueue();
+
+    return res.status(200).json(documents);
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+
 
 export const uploadDocument = async (req: Request, res: Response) => {
   try {
@@ -10,7 +27,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
     }
    console.log(req,"This is request")
     const { title } = req.body;
-    const userId = req.user.id; // from auth middleware
+    const userId = req.user.id||null; // from auth middleware
 
     const document = await prisma.document.create({
       data: {
@@ -31,6 +48,39 @@ export const uploadDocument = async (req: Request, res: Response) => {
     });
   }
 };
+
+//
+
+
+export const getMyDocuments = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id; // from auth middleware
+
+    const documents = await prisma.document.findMany({
+      where: {
+        userId: userId,
+      },
+      include: {
+        aiResult: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return res.status(200).json(documents);
+  } catch (error: any) {
+    return res.status(500).json({
+      message: "Failed to fetch documents",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+//Lawyer API
 
 export const getDocumentsForReview = async (
   req: Request,
@@ -105,13 +155,14 @@ export const lawyerDecision = async (
     });
 
     // Update document status + assign lawyer
-    const updatedDocument = await prisma.document.update({
-      where: { id },
-      data: {
-        status: decision,
-        lawyerId: lawyerId,
-      },
-    });
+const updatedDocument = await prisma.document.update({
+  where: { id },
+  data: {
+    status: decision,
+    lawyerId,
+    lawyerFeedback: feedback,
+  },
+});
 
     return res.status(200).json(updatedDocument);
   } catch (error: any) {
@@ -120,3 +171,7 @@ export const lawyerDecision = async (
     });
   }
 };
+
+
+
+

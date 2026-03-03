@@ -17,8 +17,11 @@ model User {
   refreshToken String?
   createdAt    DateTime   @default(now())
 
-  documents Document[] @relation("OwnerDocuments")
-  reviews   Document[] @relation("LawyerDocuments")
+  // User owns documents
+  ownedDocuments   Document[] @relation("OwnerDocuments")
+
+  // Lawyer assigned documents
+  assignedDocuments Document[] @relation("AssignedLawyer")
 }
 
 model Document {
@@ -27,22 +30,40 @@ model Document {
   source    DocumentSource
   status    DocumentStatus @default(DRAFT)
   createdAt DateTime       @default(now())
-  userId    String
+
+  // Original text (if editor)
   content   String?
-  lawyerId  String?
+
+  // Uploaded file
   filePath  String?
-  aiResult  AIResult?
-  lawyer    User?          @relation("LawyerDocuments", fields: [lawyerId], references: [id])
-  user      User           @relation("OwnerDocuments", fields: [userId], references: [id])
+
+  // Document Owner
+  userId String
+  user   User @relation("OwnerDocuments", fields: [userId], references: [id])
+
+  // 🔒 Single Assigned Lawyer
+  lawyerId String?
+  lawyer   User? @relation("AssignedLawyer", fields: [lawyerId], references: [id])
+
+  // AI Review
+  aiResult AIResult?
+
+  // 🔹 Lawyer Review Section (ONLY ONE REVIEW)
+  lawyerDecision   DocumentStatus?
+  lawyerFeedback   String?
+  lawyerSuggestion String?
+  revisedContent   String?
+  reviewedAt       DateTime?
 }
 
 model AIResult {
   id         String   @id @default(uuid())
   decision   String
   score      Int?
-  createdAt  DateTime @default(now())
-  documentId String   @unique
   feedback   String?
+  createdAt  DateTime @default(now())
+
+  documentId String   @unique
   document   Document @relation(fields: [documentId], references: [id])
 }
 
