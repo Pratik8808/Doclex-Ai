@@ -23,6 +23,10 @@ export const requestLawyerReview = async (documentId: string) => {
 };
 
 
+
+
+
+
 // by the user to the lawayer is requested 
 export const getReviewQueue = async () => {
   return prisma.document.findMany({
@@ -36,6 +40,32 @@ export const getReviewQueue = async () => {
           email: true,
           firstName: true,
           lastName: true,
+        },
+      },
+      aiResult: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
+
+
+
+export const getAvailableDocuments = async () => {
+  return prisma.document.findMany({
+    where: {
+      status: "REVIEW_REQUESTED",
+      lawyerId: null, // Not yet assigned
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
         },
       },
       aiResult: true,
@@ -71,6 +101,57 @@ export const lawyerDecision = async (
     data: {
       status: decision,
       lawyerId,
+    },
+  });
+};
+
+export const assignLawyer = async (
+  documentId: string,
+  lawyerId: string
+) => {
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+  });
+
+  if (!document) {
+    throw new Error("Document not found");
+  }
+
+  if (document.status !== "REVIEW_REQUESTED") {
+    throw new Error("Document not available for assignment");
+  }
+
+  if (document.lawyerId) {
+    throw new Error("Document already assigned");
+  }
+
+  return prisma.document.update({
+    where: { id: documentId },
+    data: {
+      lawyerId,
+    },
+  });
+};
+
+
+export const getMyAssignedDocuments = async (lawyerId: string) => {
+  return prisma.document.findMany({
+    where: {
+      lawyerId: lawyerId,
+    },
+    include: {
+      user: {
+    select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
+      aiResult: true,
+    },
+    orderBy: {
+      createdAt: "desc",
     },
   });
 };

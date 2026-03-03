@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { upload } from "../middleware/upload.middleware";
-import { getDocumentsForReview, lawyerDecision, uploadDocument,getMyDocuments } from "../controllers/ document.controller";
+import { getDocumentsForReview, lawyerDecision, uploadDocument,getMyDocuments, availableForReview, assignDocument } from "../controllers/ document.controller";
 import { authenticate } from "../middleware/ auth.middleware";
 import { authorize } from "../middleware/role.middleware";
 import { reviewQueue } from "../controllers/ document.controller";
@@ -23,12 +23,20 @@ router.get("/my-documents", authenticate, getMyDocuments);
 
 router.get( "/review", authenticate,authorize(["LAWYER"]), getDocumentsForReview);
 
+
+// router.get(
+//   "/review-queue",
+//   authenticate,
+//   authorize(["LAWYER"]),
+//   reviewQueue
+// );
+
 // GET Review  doucments list for Laywer only
 router.get(
   "/review-queue",
   authenticate,
   authorize(["LAWYER"]),
-  reviewQueue
+  availableForReview
 );
 
 
@@ -38,6 +46,12 @@ router.patch(
   authorize(["LAWYER"]),
   lawyerDecision
 );
+
+//Lawyer will assigin only authorize as lawyer 
+router.post("/:id/assign",authenticate,authorize(["LAWYER"]),assignDocument);
+
+//Lawyer will assigned doucs
+router.get("/my-assignments",authenticate,authorize(["LAWYER"]),assignDocument);
 
 
 router.post("/:id/request-review", authenticate, requestReview);

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient, DocumentSource } from "@prisma/client";
 
-import { getReviewQueue } from "../services/document.service";
+import { assignLawyer, getAvailableDocuments, getMyAssignedDocuments, getReviewQueue } from "../services/document.service";
 
 const prisma = new PrismaClient();
 
@@ -165,6 +165,51 @@ const updatedDocument = await prisma.document.update({
 });
 
     return res.status(200).json(updatedDocument);
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+
+// api for the lawyer only
+export const availableForReview = async (req: Request, res: Response) => {
+  try {
+    const documents = await getAvailableDocuments();
+    res.status(200).json(documents);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// api for lawayer only 
+
+export const assignDocument = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const updated = await assignLawyer(id as string , req.user!.id);
+
+    res.status(200).json({
+      message: "Document assigned successfully",
+      document: updated,
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+};
+
+//Get api doucment assigned to the lawyer
+export const myAssignedDocuments = async (req: Request, res: Response) => {
+  try {
+    const lawyerId = req.user!.id;
+
+    const documents = await getMyAssignedDocuments(lawyerId);
+
+    return res.status(200).json(documents);
   } catch (error: any) {
     return res.status(500).json({
       message: error.message,
