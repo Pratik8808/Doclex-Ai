@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient, DocumentSource } from "@prisma/client";
 
-import { assignLawyer, getAvailableDocuments, getMyAssignedDocuments, getReviewQueue } from "../services/document.service";
+import { assignLawyer, getAvailableDocuments, getDocumentById, getMyAssignedDocuments, getReviewQueue } from "../services/document.service";
 
 const prisma = new PrismaClient();
 
@@ -201,17 +201,39 @@ export const assignDocument = async (req: Request, res: Response) => {
     });
   }
 };
-
+ 
 //Get api doucment assigned to the lawyer
 export const myAssignedDocuments = async (req: Request, res: Response) => {
   try {
-    const lawyerId = req.user!.id;
+    const lawyerId = req.user!.id; // from JWT
 
     const documents = await getMyAssignedDocuments(lawyerId);
 
     return res.status(200).json(documents);
+
   } catch (error: any) {
     return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+
+// for user and lawayer for both
+export const getDocumentDetails = async (req: Request, res: Response) => {
+  try {
+    const { id  } = req.params;
+
+    const document = await getDocumentById(
+      id as string,
+      req.user!.id,
+      req.user!.role
+    );
+
+    return res.status(200).json(document);
+
+  } catch (error: any) {
+    return res.status(403).json({
       message: error.message,
     });
   }

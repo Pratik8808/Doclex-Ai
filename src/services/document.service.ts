@@ -133,7 +133,7 @@ export const assignLawyer = async (
   });
 };
 
-
+// to get there own doucumets
 export const getMyAssignedDocuments = async (lawyerId: string) => {
   return prisma.document.findMany({
     where: {
@@ -154,4 +154,43 @@ export const getMyAssignedDocuments = async (lawyerId: string) => {
       createdAt: "desc",
     },
   });
+};
+
+
+// Both for user and Lawyer to get there own doucments
+export const getDocumentById = async (
+  documentId: string,
+  userId: string,
+  role: "USER" | "LAWYER"
+) => {
+
+  const document = await prisma.document.findMany({
+    where: { id: userId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          email: true,
+        },
+      },
+      aiResult: true,
+    },
+  });
+
+  if (!document) {
+    throw new Error("Document not found");
+  }
+
+  // 🔐 Access Control
+  console.log(document.userId)
+  if (role === "USER" && document.userid !== userId) {
+    throw new Error("Not authorized from userId");
+  }
+
+  if (role === "LAWYER" && document.lawyerid !== userId) {
+    throw new Error("Not authorized");
+  }
+
+  return document;
 };

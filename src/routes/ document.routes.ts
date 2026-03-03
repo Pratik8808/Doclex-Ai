@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { upload } from "../middleware/upload.middleware";
-import { getDocumentsForReview, lawyerDecision, uploadDocument,getMyDocuments, availableForReview, assignDocument } from "../controllers/ document.controller";
+import { getDocumentsForReview, lawyerDecision, uploadDocument,getMyDocuments, availableForReview, assignDocument, myAssignedDocuments, getDocumentDetails } from "../controllers/ document.controller";
 import { authenticate } from "../middleware/ auth.middleware";
 import { authorize } from "../middleware/role.middleware";
 import { reviewQueue } from "../controllers/ document.controller";
@@ -39,6 +39,9 @@ router.get(
   availableForReview
 );
 
+// this route is for the lawyer and user both for current all doucmetns 
+router.get( "/:id", authenticate, getDocumentDetails);
+
 
 router.patch(
   "/:id/decision",
@@ -51,7 +54,8 @@ router.patch(
 router.post("/:id/assign",authenticate,authorize(["LAWYER"]),assignDocument);
 
 //Lawyer will assigned doucs
-router.get("/my-assignments",authenticate,authorize(["LAWYER"]),assignDocument);
+router.get("/my-assignments",authenticate,authorize(["LAWYER"]),myAssignedDocuments);
+
 
 
 router.post("/:id/request-review", authenticate, requestReview);
