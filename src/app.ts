@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
-import documentRoutes from "./routes/ document.routes";
+import Lawayer from "./routes/Lawayer.Routes";
+import User  from  "./routes/User.Routes"
 import aiRoutes from "./routes/ai.routes"
 import path from "path";
 import { authenticate } from "./middleware/ auth.middleware";
@@ -18,7 +19,8 @@ app.use(
 );
 
 app.use("/api/auth", authRoutes);
-app.use("/documents", documentRoutes);
+app.use("/api/documents", Lawayer);
+app.use('api/documents',User)
 app.use('/api/documents',aiRoutes)
 
 

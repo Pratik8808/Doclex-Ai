@@ -76,6 +76,7 @@ enum DocumentSource {
   EDITOR
   UPLOAD
   DRIVE
+  MANUAL
 }
 
 enum DocumentStatus {

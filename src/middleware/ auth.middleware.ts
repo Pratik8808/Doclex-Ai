@@ -26,6 +26,7 @@ export const authenticate = (
       id: decoded.userId,
       role: decoded.role as any,
     };
+    // console.log('Req user',req.user," ",req.user.role);
 
     next();
   } catch {

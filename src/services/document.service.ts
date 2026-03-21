@@ -133,15 +133,16 @@ export const assignLawyer = async (
   });
 };
 
-// to get there own doucumets
+// to get there own doucumets only for lawayer 
 export const getMyAssignedDocuments = async (lawyerId: string) => {
+  console.log("this is lawyer id my service ",lawyerId);
   return prisma.document.findMany({
     where: {
       lawyerId: lawyerId,
     },
     include: {
       user: {
-    select: {
+        select: {
           id: true,
           firstName: true,
           lastName: true,
@@ -156,7 +157,6 @@ export const getMyAssignedDocuments = async (lawyerId: string) => {
   });
 };
 
-
 // Both for user and Lawyer to get there own doucments
 export const getDocumentById = async (
   documentId: string,
@@ -165,7 +165,7 @@ export const getDocumentById = async (
 ) => {
 
   const document = await prisma.document.findMany({
-    where: { id: userId },
+    where: { id:userId },
     include: {
       user: {
         select: {
