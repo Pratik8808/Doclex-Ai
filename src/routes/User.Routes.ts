@@ -8,16 +8,19 @@ import {
   getDocumentDetails,
 } from "../controllers/ document.controller";
 import { requestReview } from "../controllers/Request.review";
+import { authorize } from "../middleware/role.middleware";
 
 const router = Router();
 
+router.use(authenticate);
 // Upload document
 router.post(
   "/upload",
-  authenticate,
+  authorize(['USER']),
   upload.single("file"),
   uploadDocument
 );
+console.log("USER ROUTER HIT");
 
 // Get my documents
 router.get("/my-documents", authenticate, getMyDocuments);

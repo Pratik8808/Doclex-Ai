@@ -11,7 +11,7 @@ import {
 } from "../controllers/ document.controller";
 
 const router = Router();
-
+console.log("LAWYER ROUTER HIT");
 // Only LAWYER access
 router.use(authenticate, authorize(["LAWYER"]));
 

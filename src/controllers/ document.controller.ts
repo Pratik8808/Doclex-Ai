@@ -275,7 +275,6 @@ export const getDocumentDetails = async (req: Request, res: Response) => {
       });
     }
 
-    // ================= UPLOAD / DRIVE (PDFs) =================
     if (document.source === "UPLOAD" || document.source === "DRIVE") {
       if (!document.filePath) {
         return res.status(404).json({ message: "File path not found in database" });
