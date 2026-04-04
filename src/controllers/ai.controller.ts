@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { runDummyAIReview } from "../services/ai.service";
+import { runAIReview } from "../services/ai.service";
 
 export const aiReview = async (req: Request, res: Response) => {
   try {
@@ -11,7 +11,7 @@ export const aiReview = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await runDummyAIReview(id);
+    const result = await runAIReview(id);
 
     return res.status(200).json({
 

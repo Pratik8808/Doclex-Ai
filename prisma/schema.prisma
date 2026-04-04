@@ -24,47 +24,59 @@ model User {
   assignedDocuments Document[] @relation("AssignedLawyer")
 }
 
-model Document {
+
+ model Document {
   id        String         @id @default(uuid())
   title     String
   source    DocumentSource
   status    DocumentStatus @default(DRAFT)
   createdAt DateTime       @default(now())
 
-  // Original text (if editor)
-  content   String?
+  // Editor (Jodit HTML)
+  content        String?   // original HTML
+  plainText      String?   // extracted text for AI
 
-  // Uploaded file
-  filePath  String?
+  // File upload
+  filePath       String?
+  fileType       String?   // pdf | docx | image
 
-  // Document Owner
+  // Ownership
   userId String
   user   User @relation("OwnerDocuments", fields: [userId], references: [id])
 
-  // 🔒 Single Assigned Lawyer
   lawyerId String?
   lawyer   User? @relation("AssignedLawyer", fields: [lawyerId], references: [id])
 
-  // AI Review
+  // AI
   aiResult AIResult?
 
-  // 🔹 Lawyer Review Section (ONLY ONE REVIEW)
+  // Lawyer review
   lawyerDecision   DocumentStatus?
   lawyerFeedback   String?
   lawyerSuggestion String?
-  revisedContent   String?
+  revisedContent   String?   // edited version
   reviewedAt       DateTime?
 }
 
-model AIResult {
-  id         String   @id @default(uuid())
-  decision   String
-  score      Int?
-  feedback   String?
-  createdAt  DateTime @default(now())
 
-  documentId String   @unique
-  document   Document @relation(fields: [documentId], references: [id])
+model AIResult {
+  id            String   @id @default(uuid())
+
+  // 🤖 AI OUTPUT
+  score         Int?
+  riskLevel     String?
+  missingFields String[] 
+  summary       String?
+
+  // 👨‍⚖️ LAWYER DECISION
+  decision      String?   // APPROVED / REJECTED / PENDING
+  feedback      String?
+
+  createdAt     DateTime @default(now())
+
+  // 🔗 RELATION
+  documentId    String   @unique
+  document      Document @relation(fields: [documentId], references: [id])
 }
 
 enum Role {
@@ -81,6 +93,7 @@ enum DocumentSource {
 
 enum DocumentStatus {
   DRAFT
+  AI_PROCESSING   
   AI_REVIEWED
   REVIEW_REQUESTED
   APPROVED

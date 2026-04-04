@@ -1,11 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
 
 const prisma = new PrismaClient();
 
-export const runDummyAIReview = async (documentId: string) => {
-  //
+const AI_BASE_URL = process.env.AI_BASE_URL!;
+const AI_SECRET = process.env.AI_SECRET!;
+
+export const runAIReview = async (documentId: string) => {
   const document = await prisma.document.findUnique({
     where: { id: documentId },
   });
@@ -14,47 +17,35 @@ export const runDummyAIReview = async (documentId: string) => {
     throw new Error("Document not found");
   }
 
-  if (!document.filePath) {
-    throw new Error("No file attached to document");
+  if (!document.plainText) {
+    throw new Error("No text available for AI analysis");
   }
 
   if (document.status !== "DRAFT") {
     throw new Error("Document is not eligible for AI review");
   }
 
-  // 2️⃣ Get absolute file path
-  const filePath = path.join(process.cwd(), document.filePath);
+  console.log("Sending text to AI...");
+  console.log("Thisssssss plain doucment  ",document.plainText);
 
-  if (!fs.existsSync(filePath)) {
-    throw new Error("File not found on server");
-  }
 
-  console.log("AI reviewing file:", filePath);
+  const aiResponse = await analyzeWithAI(document.plainText);
 
-  const fileBuffer = fs.readFileSync(filePath);
-  console.log("File size (bytes):", fileBuffer.length);
+  const { score, riskLevel, missingFields, summary } = aiResponse;
 
-  // 3️⃣ Dummy AI logic
-  const score = Math.floor(Math.random() * 100) + 1;
-
-  const decision = score > 60 ? "LIKELY_VALID" : "NEEDS_ATTENTION";
-
-  const feedback =
-    score > 60
-      ? "Document structure looks correct."
-      : "Some clauses may need legal attention.";
-
-  // 4️⃣ Save AIResult
+  // Save AI result
   const aiResult = await prisma.aIResult.create({
     data: {
-      decision,
       score,
-      feedback,
+      riskLevel,
+      missingFields,
+      summary,
+      decision: "PENDING",
       documentId,
     },
   });
 
-  // 5️⃣ Update document status
+  // Update document status
   const updatedDocument = await prisma.document.update({
     where: { id: documentId },
     data: {
@@ -62,14 +53,38 @@ export const runDummyAIReview = async (documentId: string) => {
     },
   });
 
-  // 6️⃣ Return combined result
   return {
     message: "AI review completed",
-    fileInfo: {
-      filePath,
-      fileSize: fileBuffer.length,
-    },
     aiResult,
     document: updatedDocument,
   };
+};
+
+
+export const analyzeWithAI = async (text: string) => {
+  const res = await axios.post(
+    `${AI_BASE_URL}/analyze`,
+    { text },
+    {
+      headers: {
+        Authorization: `Bearer ${AI_SECRET}`,
+      },
+    }
+  );
+
+  return res.data;
+};
+
+export const chatAI = async (message: string) => {
+  const res = await axios.post(
+    `${AI_BASE_URL}/ai/chat`,
+    { message },
+    {
+      headers: {
+        Authorization: `Bearer ${AI_SECRET}`,
+      },
+    }
+  );
+
+  return res.data;
 };

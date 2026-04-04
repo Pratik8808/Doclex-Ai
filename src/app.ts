@@ -20,9 +20,9 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 
-app.use("/api/documents", User);   // USER
-app.use("/api/lawyer", Lawayer);   // LAWYER
-app.use("/api/ai", aiRoutes);      // AI
+app.use("/api/documents", User);   
+app.use("/api/lawyer", Lawayer);   
+app.use("/api/ai", aiRoutes);      
 
 
 app.get('/', (req, res) => {

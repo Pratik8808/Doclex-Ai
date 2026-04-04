@@ -9,10 +9,23 @@ import {
 } from "../controllers/ document.controller";
 import { requestReview } from "../controllers/Request.review";
 import { authorize } from "../middleware/role.middleware";
+import { runAIReview,createDocument } from "../controllers/ document.controller";
 
 const router = Router();
 
 router.use(authenticate);
+
+router.post(
+  "/create",
+  authorize(["USER"]),
+  createDocument
+);
+
+router.post(
+  "/:id/ai-review",
+  authorize(['USER']),
+  runAIReview
+);
 // Upload document
 router.post(
   "/upload",
@@ -30,5 +43,6 @@ router.post("/:id/request-review", authenticate, requestReview);
 
 // Get document details (user can access own)
 router.get("/:id", authenticate, getDocumentDetails);
+
 
 export default router;

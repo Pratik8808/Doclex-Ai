@@ -1,14 +1,25 @@
 import { Request, Response } from "express";
 import { PrismaClient, DocumentSource } from "@prisma/client";
-import prisma from "../config/db";
+// import prisma from "../config/db";
 import path from "path";
 import fs from "fs";
+import { htmlToText } from "html-to-text";
+// import {
+//   extractTextFromPDF,
+//   extractTextFromDocx,
+// } from "..";
 
+import { extractTextFromPDF } from "../services/pdf.service";
+import { extractTextFromDocx } from "../services/docx.service";
+import { extractTextWithOCR } from "../services/ocr.service";
+import { isTextValid,cleanText } from "../utills/text.utils";
 // import { Request, Response } from "express";
 // import fs from "fs";
 // import path from "path";
 
 import { assignLawyer, getAvailableDocuments, getDocumentById, getMyAssignedDocuments, getReviewQueue } from "../services/document.service";
+import { chatAI, runDummyAIReview } from "../services/ai.service";
+import { analyzeWithAI } from "../services/ai.service";
 
 const prisma = new PrismaClient();
 
@@ -25,38 +36,215 @@ export const reviewQueue = async (req: Request, res: Response) => {
   }
 };
 
+const extractJson = (text: string) => {
+  try {
+    // Attempt 1: Direct parse
+    return JSON.parse(text);
+  } catch (e) {
+    // Attempt 2: Use Regex to find JSON block if LLM returned ```json ... ```
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error("No valid JSON found in LLM response");
+  }
+};
 
+export const runAIReview = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const document = await prisma.document.findUnique({ where: { id } });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // ✅ STEP 1: set processing
+    await prisma.document.update({
+      where: { id },
+      data: { status: "AI_PROCESSING" },
+    });
+
+    // ✅ STEP 2: extract text
+    let textContent = document.content || "";
+
+    if (document.filePath) {
+      const filePath = path.resolve(document.filePath);
+
+      if (!fs.existsSync(filePath)) {
+        throw new Error("File not found");
+      }
+
+      textContent = fs.readFileSync(filePath, "utf-8");
+    }
+
+    // ✅ STEP 3: call AI
+    const aiResult = await analyzeWithAI(textContent);
+
+    console.log("AI RESULT:", aiResult);
+
+    // ✅ STEP 4: SAFE VALIDATION (FIXED)
+    if (
+      !aiResult ||
+      typeof aiResult.score !== "number" ||
+      typeof aiResult.summary !== "string" ||
+      !Array.isArray(aiResult.missingFields)
+    ) {
+      throw new Error("Invalid AI response");
+    }
+
+    // ✅ STEP 5: save result
+    const saved = await prisma.aIResult.create({
+      data: {
+        documentId: id,
+        score: aiResult.score,
+        riskLevel: aiResult.riskLevel || "UNKNOWN",
+        missingFields: aiResult.missingFields || [],
+        summary: aiResult.summary || "",
+        decision: "PENDING",
+      },
+    });
+
+    // ✅ STEP 6: mark success
+    await prisma.document.update({
+      where: { id },
+      data: { status: "AI_REVIEWED" },
+    });
+
+    return res.status(200).json(saved);
+
+  } catch (error: any) {
+    console.error("AI Review Error:", error);
+
+    // ✅ reset status on failure
+    await prisma.document.update({
+      where: { id },
+      data: { status: "DRAFT" },
+    });
+
+    return res.status(500).json({
+      message: "AI Analysis failed. Try again later.",
+    });
+  }
+};
 
 export const uploadDocument = async (req: Request, res: Response) => {
   try {
+    // ✅ STEP 1 — File check
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
     }
-   console.log(req,"This is request")
-    const { title } = req.body;
-    const userId = req?.user.id||null; // from auth middleware
 
+    const userId = req.user.id;
+
+    // ✅ STEP 2 — MIME detection (ONLY ONCE)
+    const mime = req.file.mimetype;
+
+    const isPDF = mime === "application/pdf";
+    const isDocx =
+      mime ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    let fileType = "unknown";
+    let plainText = "";
+
+    // ✅ STEP 3 — Primary extraction
+    if (isPDF) {
+      fileType = "pdf";
+      plainText = await extractTextFromPDF(req.file.path);
+    } else if (isDocx) {
+      fileType = "docx";
+      plainText = await extractTextFromDocx(req.file.path);
+    } else {
+      return res.status(400).json({
+        message: "Unsupported file type (only PDF and DOCX allowed)",
+      });
+    }
+
+    console.log("📄 Extracted text length:", plainText?.length);
+
+    // ✅ STEP 4 — OCR fallback (CRITICAL)
+    if (!isTextValid(plainText)) {
+      console.log("⚠️ Extraction failed → running OCR...");
+      plainText = await extractTextWithOCR(req.file.path);
+    }
+
+    // ✅ STEP 5 — Clean text
+    plainText = cleanText(plainText);
+
+    // ✅ STEP 6 — Final validation
+    if (!plainText || plainText.length < 50) {
+      return res.status(400).json({
+        message: "Text extraction failed (even after OCR)",
+      });
+    }
+    console.log("Final text preview:", plainText.slice(0, 200));
+
+    // ✅ STEP 7 — Save to DB
     const document = await prisma.document.create({
       data: {
-        title:req.file.filename,
+        title: req.file.originalname,
         filePath: req.file.path,
+        fileType,
+        plainText,
         source: DocumentSource.UPLOAD,
         userId,
       },
     });
 
+    // ✅ RESPONSE
     return res.status(201).json({
-      message: "Document uploaded successfully",
+      message: "Document uploaded & processed successfully",
       document,
     });
+
   } catch (error: any) {
-    return res.status(400).json({
+    console.error("❌ Upload error:", error);
+
+    return res.status(500).json({
       message: error.message || "Upload failed",
     });
   }
 };
+//user create text editor
 
-//
+export const createDocument = async (req: Request, res: Response) => {
+  try {
+    const { title, content } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ message: "Content required" });
+    }
+
+    const userId = req.user.id;
+
+    // 🔥 Convert HTML → Plain Text
+    const plainText = htmlToText(content, {
+      wordwrap: false,
+    });
+
+    const document = await prisma.document.create({
+      data: {
+        title: title || "Untitled Document",
+        content,            // HTML
+        plainText,          // CLEAN TEXT
+        source: DocumentSource.EDITOR,
+        userId,
+      },
+    });
+
+    return res.status(201).json({
+      message: "Draft created",
+      document,
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Create failed",
+    });
+  }
+};
 
 
 export const getMyDocuments = async (req: Request, res: Response) => {
@@ -237,6 +425,26 @@ export const myAssignedDocuments = async (req: Request, res: Response) => {
 
 // for user and lawayer for both
 
+export const chatController = async (req: Request, res: Response) => {
+  try {
+    const { message } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ message: "Message is required" });
+    }
+
+    const response = await chatAI(message);
+
+    return res.status(200).json(response);
+
+  } catch (error: any) {
+    console.error("Chat AI Error:", error);
+
+    return res.status(500).json({
+      message: "AI chat failed",
+    });
+  }
+};
 
 
 // import prisma from "../your-prisma-client-path"; 
