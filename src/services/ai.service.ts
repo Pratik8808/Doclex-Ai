@@ -26,14 +26,14 @@ export const runAIReview = async (documentId: string) => {
   }
 
   console.log("Sending text to AI...");
-  console.log("Thisssssss plain doucment  ",document.plainText);
+  console.log("Thisssssss plain doucment  ",document.plainText); /// debugging mode ,mn
 
 
   const aiResponse = await analyzeWithAI(document.plainText);
 
   const { score, riskLevel, missingFields, summary } = aiResponse;
-
-  // Save AI result
+// necessary the debug here 
+  // Save AI result 
   const aiResult = await prisma.aIResult.create({
     data: {
       score,
@@ -76,7 +76,9 @@ export const analyzeWithAI = async (text: string) => {
 };
 
 export const chatAI = async (message: string) => {
+    console.log("isnisde chat Ai tiwh theader") 
   const res = await axios.post(
+  
     `${AI_BASE_URL}/ai/chat`,
     { message },
     {

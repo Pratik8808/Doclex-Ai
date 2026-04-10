@@ -5,7 +5,7 @@ export const extractTextFromDocx = async (filePath: string): Promise<string> => 
     const result = await mammoth.extractRawText({ path: filePath });
     return result.value || "";
   } catch (error) {
-    console.error("❌ DOCX extraction error:", error);
+    console.error(" DOCX extraction error:", error);
     return "";
   }
 };

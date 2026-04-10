@@ -8,7 +8,7 @@ export const extractTextFromPDF = async (filePath: string): Promise<string> => {
 
     return data.text || "";
   } catch (error) {
-    console.error("❌ PDF extraction error:", error);
+    console.error("PDF extraction error:", error);
     return "";
   }
 };

@@ -32,9 +32,9 @@ model User {
   status    DocumentStatus @default(DRAFT)
   createdAt DateTime       @default(now())
 
-  // Editor (Jodit HTML)
-  content        String?   // original HTML
-  plainText      String?   // extracted text for AI
+ 
+  content        String?   
+  plainText      String?   
 
   // File upload
   filePath       String?
@@ -54,7 +54,7 @@ model User {
   lawyerDecision   DocumentStatus?
   lawyerFeedback   String?
   lawyerSuggestion String?
-  revisedContent   String?   // edited version
+  revisedContent   String?  
   reviewedAt       DateTime?
 }
 
@@ -62,19 +62,19 @@ model User {
 model AIResult {
   id            String   @id @default(uuid())
 
-  // 🤖 AI OUTPUT
+  
   score         Int?
   riskLevel     String?
   missingFields String[] 
   summary       String?
 
-  // 👨‍⚖️ LAWYER DECISION
-  decision      String?   // APPROVED / REJECTED / PENDING
+
+  decision      String?   
   feedback      String?
 
   createdAt     DateTime @default(now())
 
-  // 🔗 RELATION
+
   documentId    String   @unique
   document      Document @relation(fields: [documentId], references: [id])
 }

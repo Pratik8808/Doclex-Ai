@@ -38,10 +38,10 @@ export const reviewQueue = async (req: Request, res: Response) => {
 
 const extractJson = (text: string) => {
   try {
-    // Attempt 1: Direct parse
+  // Direct parse
     return JSON.parse(text);
   } catch (e) {
-    // Attempt 2: Use Regex to find JSON block if LLM returned ```json ... ```
+   
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
@@ -60,13 +60,13 @@ export const runAIReview = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    // ✅ STEP 1: set processing
+   
     await prisma.document.update({
       where: { id },
       data: { status: "AI_PROCESSING" },
     });
 
-    // ✅ STEP 2: extract text
+   
     let textContent = document.content || "";
 
     if (document.filePath) {
@@ -79,12 +79,12 @@ export const runAIReview = async (req: Request, res: Response) => {
       textContent = fs.readFileSync(filePath, "utf-8");
     }
 
-    // ✅ STEP 3: call AI
+  
     const aiResult = await analyzeWithAI(textContent);
 
     console.log("AI RESULT:", aiResult);
 
-    // ✅ STEP 4: SAFE VALIDATION (FIXED)
+   
     if (
       !aiResult ||
       typeof aiResult.score !== "number" ||
@@ -94,7 +94,7 @@ export const runAIReview = async (req: Request, res: Response) => {
       throw new Error("Invalid AI response");
     }
 
-    // ✅ STEP 5: save result
+  
     const saved = await prisma.aIResult.create({
       data: {
         documentId: id,
@@ -106,7 +106,7 @@ export const runAIReview = async (req: Request, res: Response) => {
       },
     });
 
-    // ✅ STEP 6: mark success
+    
     await prisma.document.update({
       where: { id },
       data: { status: "AI_REVIEWED" },
@@ -117,7 +117,7 @@ export const runAIReview = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("AI Review Error:", error);
 
-    // ✅ reset status on failure
+   
     await prisma.document.update({
       where: { id },
       data: { status: "DRAFT" },
@@ -131,14 +131,14 @@ export const runAIReview = async (req: Request, res: Response) => {
 
 export const uploadDocument = async (req: Request, res: Response) => {
   try {
-    // ✅ STEP 1 — File check
+  
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
     }
 
     const userId = req.user.id;
 
-    // ✅ STEP 2 — MIME detection (ONLY ONCE)
+    /// if any failed then check again
     const mime = req.file.mimetype;
 
     const isPDF = mime === "application/pdf";
@@ -149,7 +149,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
     let fileType = "unknown";
     let plainText = "";
 
-    // ✅ STEP 3 — Primary extraction
+   
     if (isPDF) {
       fileType = "pdf";
       plainText = await extractTextFromPDF(req.file.path);
@@ -164,16 +164,16 @@ export const uploadDocument = async (req: Request, res: Response) => {
 
     console.log("📄 Extracted text length:", plainText?.length);
 
-    // ✅ STEP 4 — OCR fallback (CRITICAL)
+   
     if (!isTextValid(plainText)) {
       console.log("⚠️ Extraction failed → running OCR...");
       plainText = await extractTextWithOCR(req.file.path);
     }
 
-    // ✅ STEP 5 — Clean text
+
     plainText = cleanText(plainText);
 
-    // ✅ STEP 6 — Final validation
+  
     if (!plainText || plainText.length < 50) {
       return res.status(400).json({
         message: "Text extraction failed (even after OCR)",
@@ -181,7 +181,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
     }
     console.log("Final text preview:", plainText.slice(0, 200));
 
-    // ✅ STEP 7 — Save to DB
+   
     const document = await prisma.document.create({
       data: {
         title: req.file.originalname,
@@ -193,7 +193,6 @@ export const uploadDocument = async (req: Request, res: Response) => {
       },
     });
 
-    // ✅ RESPONSE
     return res.status(201).json({
       message: "Document uploaded & processed successfully",
       document,
@@ -219,7 +218,7 @@ export const createDocument = async (req: Request, res: Response) => {
 
     const userId = req.user.id;
 
-    // 🔥 Convert HTML → Plain Text
+    
     const plainText = htmlToText(content, {
       wordwrap: false,
     });
@@ -462,24 +461,24 @@ export const getDocumentDetails = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    // 🔐 AUTHORIZATION LOGIC
+    // Authorization natr debug lagel
     const isOwner = document.userId === user.id;
     const isAssignedLawyer = document.lawyerId === user.id;
     
-    // Allow ANY lawyer to preview the document IF it is waiting in the review queue
+    // Allow ANY lawyer to preview the document IF it is waiting in the review queue 
     const isPreviewingQueue = user.role === "LAWYER" && document.status === "REVIEW_REQUESTED"; 
 
     if (!isOwner && !isAssignedLawyer && !isPreviewingQueue) {
       return res.status(403).json({ message: "Unauthorized to view this document" });
     }
 
-    // ================= EDITOR =================
+  
     // Removed "MANUAL" - now exclusively using "EDITOR"
     if (document.source === "EDITOR") {
       return res.json({
         ...document,
         contentType: "HTML",
-        content: document.content, // HTML string from Jodit Editor
+        content: document.content, // html will come from the jodit editor
       });
     }
 
@@ -498,7 +497,7 @@ export const getDocumentDetails = async (req: Request, res: Response) => {
       return res.sendFile(filePath);
     }
 
-    // Fallback if it's somehow none of the above
+    
     return res.json(document);
 
   } catch (error) {
