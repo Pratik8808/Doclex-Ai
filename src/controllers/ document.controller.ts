@@ -199,7 +199,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("❌ Upload error:", error);
+    console.error(" Upload error:", error);
 
     return res.status(500).json({
       message: error.message || "Upload failed",
