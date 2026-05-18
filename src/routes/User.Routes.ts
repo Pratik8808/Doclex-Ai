@@ -10,6 +10,7 @@ import {
 import { requestReview } from "../controllers/Request.review";
 import { authorize } from "../middleware/role.middleware";
 import { runAIReview,createDocument } from "../controllers/ document.controller";
+import { deleteDocument } from "../controllers/ document.controller";
 
 const router = Router();
 
@@ -40,6 +41,14 @@ router.get("/my-documents", authenticate, getMyDocuments);
 
 // Request lawyer review
 router.post("/:id/request-review", authenticate, requestReview);
+
+router.delete(
+  "/:id",
+  authorize(["USER"]),
+  deleteDocument
+);
+
+
 
 // Get document details (user can access own)
 router.get("/:id", authenticate, getDocumentDetails);

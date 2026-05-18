@@ -206,6 +206,39 @@ export const uploadDocument = async (req: Request, res: Response) => {
     });
   }
 };
+
+
+//
+export const deleteDocument = async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+
+   
+    await prisma.aIResult.deleteMany({
+      where: {
+        documentId: id,
+      },
+    });
+
+    // Then delete document
+    await prisma.document.delete({
+      where: {
+        id,
+      },
+    });
+
+    res.json({
+      message: "Document deleted successfully",
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to delete document",
+    });
+  }
+};
 //user create text editor
 
 export const createDocument = async (req: Request, res: Response) => {
